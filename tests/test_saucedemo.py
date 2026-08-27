@@ -54,15 +54,43 @@ def test_add_item_to_cart_and_checkout():
 
         driver.find_element(By.ID, "checkout").click() ##clicks checkout
 
-        wait.until(EC.visibility_of_element_located((By.ID, "first-name"))).send_keys(
-            "Test"
+        first_name = wait.until(EC.visibility_of_element_located((By.ID, "first-name")))
+        last_name = driver.find_element(By.ID, "last-name")
+        postal_code = driver.find_element(By.ID, "postal-code")
+
+        driver.execute_script(
+            """
+            const setNativeValue = (element, value) => {
+                const valueSetter = Object.getOwnPropertyDescriptor(
+                    window.HTMLInputElement.prototype,
+                    'value'
+                ).set;
+                valueSetter.call(element, value);
+            };
+
+            const fields = {
+                'first-name': 'Test',
+                'last-name': 'User',
+                'postal-code': '12345'
+            };
+
+            for (const [id, value] of Object.entries(fields)) {
+                const field = document.getElementById(id);
+                setNativeValue(field, value);
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            """
         )
-        driver.find_element(By.ID, "last-name").send_keys("User")
-        driver.find_element(By.ID, "postal-code").send_keys("12345")
+
+        assert first_name.get_attribute("value") == "Test"
+        assert last_name.get_attribute("value") == "User"
+        assert postal_code.get_attribute("value") == "12345"
+
         driver.find_element(By.ID, "continue").click()
 
         wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "summary_info")))
-        driver.find_element(By.ID, "Finish").click() ## finish button
+        driver.find_element(By.ID, "finish").click() ## finish button
 
         complete_header = wait.until(
             EC.visibility_of_element_located((By.CLASS_NAME, "complete-header"))
@@ -83,4 +111,3 @@ def test_locked_out_user_error_message():
         assert "locked out" in error_box.text.lower() ##check if the error message contains "locked out"
     finally:
         driver.quit()
-
